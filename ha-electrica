@@ -1,0 +1,48 @@
+######### RSS FeedReader   #############
+sensor:
+  - platform: rest
+    name: Muntenia Power Outage
+    resource: "URL_FEED_RSS"  # Înlocuiește cu URL-ul feedului tău RSS
+    method: GET
+    headers:
+      User-Agent: Home Assistant
+    value_template: "{{ state_attr('sensor.muntenia_power_outage', 'title') }}" # Sau folosește un template pentru extragerea textului dorit
+    json_attributes:
+      - entries
+    scan_interval: 300  # Se verifică feed-ul la fiecare 5 minute
+########### Automation ##############
+  - alias: "Notificare avarie electrică Orasul Tau"
+  trigger:
+    - platform: state
+      entity_id: sensor.muntenia_power_outage
+  condition:
+    condition: template
+    value_template: >
+      {% set keywords = ["Localitate", "Strada", "O_alta_strada", "O_alta_strada"] %}
+      {% set title = state_attr('sensor.muntenia_power_outage', 'title') %}
+      {% set description = state_attr('sensor.muntenia_power_outage', 'description') %}
+      {% for keyword in keywords %}
+        {% if keyword in title or keyword in description %}
+          {{ true }}
+        {% endif %}
+      {% endfor %}
+      {{ false }}
+  action:
+    - service: notify.notify  # Înlocuiește cu serviciul tău de notificare
+      data:
+        title: "Avarie Electrică"
+        message: >
+          O avarie sau lucrare este anunțată în zona ta: {{ title }}. Detalii: {{ description }}.
+
+
+########### Feedparser ################
+sensor:
+  - platform: feedparser
+    name: Muntenia Power Outage
+    feed_url: "URL_FEED_RSS"  # Înlocuiește cu URL-ul feedului tău RSS
+    date_format: '%Y-%m-%d %H:%M:%S'
+    inclusions:
+      - title
+      - description
+      - link
+    scan_interval: 300
